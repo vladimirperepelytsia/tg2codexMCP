@@ -1,0 +1,25 @@
+# Template only; review paths and provision the service account before installation.
+[Unit]
+Description=Telegram MCP connector
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tg2codex
+Group=tg2codex
+WorkingDirectory=/opt/tg2codex
+EnvironmentFile=/etc/tg2codex/connector.env
+ExecStart=/usr/bin/node /opt/tg2codex/dist/src/main.js
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/tg2codex
+# Set DB_PATH=/var/lib/tg2codex/connector.sqlite in the environment file.
+
+[Install]
+WantedBy=multi-user.target
