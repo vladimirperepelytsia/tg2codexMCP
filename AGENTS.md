@@ -23,3 +23,7 @@ Node.js 24, strict TypeScript, official MCP SDK 2, Zod, built-in SQLite, Standar
 ## State and concurrency
 
 One running process per database and one poller per bot. Share one HTTP process across clients; do not start a poller per client. Schema changes require an additive migration and persistence tests. Preserve send idempotency keys; uncertain Telegram sends must never be automatically retried with a new key. Polling checkpoints commit with ingestion before the next acknowledgement request. Do not silently skip malformed updates or drop a pre-existing webhook. A stale lock requires operator verification that its process is gone before removal; never auto-remove a possibly live lock.
+
+## Public website
+
+`site/` is the buildless GitHub Pages landing page. Publish only this directory; never the repository root, runtime data or configuration. Use relative local asset URLs so the project path works. No trackers, external fonts or JavaScript are needed. Keep compatibility claims aligned with `docs/clients.md`, including the distinction between SDK tests and live application tests. `npm run check:site` validates assets, anchors, repository links and the publish allowlist. Preview desktop/mobile layouts and keyboard navigation before website changes. See `docs/website.md` for publication and checks. Use explicit `<tg_channel_id>` placeholders in public configuration examples; actual numeric validation remains unchanged.

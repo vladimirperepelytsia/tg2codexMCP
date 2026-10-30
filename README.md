@@ -1,5 +1,7 @@
 # tg2codexMCP
 
+[Project website](https://vladimirperepelytsia.github.io/tg2codexMCP/) · [Client setup](docs/clients.md)
+
 A standalone Telegram MCP server for **Codex, Cursor, Gemini CLI, Claude Code and Claude Desktop**. It reads bot-received updates directly from the Telegram Bot API, retains a bounded local copy, and exposes tools for message retrieval, context, search and optional controlled sends. **No n8n, workflow platform, LLM API or dot is required.** The connected client performs analysis using its own model.
 
 **Status: locally tested implementation, not a live integration certification.** The official MCP SDK client passes stdio and Streamable HTTP integration tests. Client-specific setup is based on official documentation; the five applications have not been configured or exercised against a live bot. See the [verification matrix](docs/clients.md#verification-matrix).
@@ -13,7 +15,7 @@ npm ci
 npm run check
 ```
 
-After approving use of a dedicated bot, copy `.env.example` to ignored `.env`, supply the bot token and allowed chat IDs, and set an **absolute** private `DB_PATH`. Keep sending disabled initially. Configure one client using an [example](examples/clients/) and the [client instructions](docs/clients.md). Each example launches Node directly; do not use `npm start` as the client's stdio command because npm can write non-protocol output to stdout.
+After approving use of a dedicated bot, copy `.env.example` to ignored `.env`, supply the bot token and allowed chat IDs (`ALLOWED_CHAT_IDS=<tg_channel_id>`; replace the placeholder with a real numeric Telegram chat ID), and set an **absolute** private `DB_PATH`. Keep sending disabled initially. Configure one client using an [example](examples/clients/) and the [client instructions](docs/clients.md). Each example launches Node directly; do not use `npm start` as the client's stdio command because npm can write non-protocol output to stdout.
 
 The default is `MCP_TRANSPORT=stdio` and `INGESTION_MODE=polling`. The client starts/stops the process. `INGESTION_MODE=offline` reads retained data with no polling; an [offline template](examples/offline.env.example) needs no secrets. Polling starts on process launch and acknowledges Telegram updates, so do not enable it casually for a bot used elsewhere.
 

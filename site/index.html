@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101614">
+  <meta name="description" content="A standalone, open-source Telegram MCP server. Bring scoped messages, search and context to your AI coding client, with local storage and controlled sends.">
+  <meta property="og:title" content="tg2codexMCP — From conversation to context">
+  <meta property="og:description" content="Telegram context for your AI workspace. Standalone MCP, local storage, explicit boundaries.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vladimirperepelytsia.github.io/tg2codexMCP/">
+  <link rel="canonical" href="https://vladimirperepelytsia.github.io/tg2codexMCP/">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <title>tg2codexMCP — From conversation to context</title>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="wrap header">
+  <a class="brand" href="./" aria-label="tg2codexMCP home"><span class="brand-icon" aria-hidden="true">↗</span> tg2codex<span>MCP</span></a>
+  <nav aria-label="Main navigation"><a href="#capabilities">Capabilities</a><a href="#clients">Clients</a><a href="https://github.com/vladimirperepelytsia/tg2codexMCP/tree/main/docs">Docs <span aria-hidden="true">↗</span></a></nav>
+  <a class="nav-github" href="https://github.com/vladimirperepelytsia/tg2codexMCP">GitHub <span aria-hidden="true">↗</span></a>
+</header>
+<main id="main">
+<section class="wrap hero" aria-labelledby="hero-title">
+  <div class="hero-copy"><p class="eyebrow"><span class="status-dot"></span> OPEN SOURCE · APACHE 2.0</p>
+    <h1 id="hero-title">From conversation<br>to <em>context.</em></h1>
+    <p class="lede">Bring Telegram into your AI workspace. Give your coding client the messages it needs to search, understand and act—with boundaries you control.</p>
+    <div class="actions"><a class="button primary" href="#start">Start building <span aria-hidden="true">↗</span></a><a class="button secondary" href="https://github.com/vladimirperepelytsia/tg2codexMCP">Explore the source <span aria-hidden="true">↗</span></a></div>
+    <p class="hero-note">Standalone MCP. Local storage. No workflow platform required.</p>
+  </div>
+  <div class="flow" aria-label="Telegram bot updates flow through a local MCP server to your chosen AI client">
+    <div class="flow-top"><span class="tiny-label">THE CONTEXT CONNECTION</span><span class="pill">LOCAL FIRST</span></div>
+    <div class="flow-source"><span class="telegram-mark" aria-hidden="true">↗</span><div><strong>Telegram</strong><small>Updates your bot receives</small></div><span class="node-label">SOURCE</span></div>
+    <div class="connector" aria-hidden="true"><i></i><span>Direct Bot API polling</span></div>
+    <div class="flow-core"><div class="core-heading"><span class="core-symbol" aria-hidden="true">[↗]</span><strong>tg2codexMCP</strong><span class="status-dot"></span></div><p>Your local context layer</p><div class="core-tags"><span>Scoped chats</span><span>SQLite</span><span>Retention</span></div></div>
+    <div class="connector" aria-hidden="true"><i></i><span>stdio / Streamable HTTP</span></div>
+    <div class="flow-clients"><span>Codex</span><span>Cursor</span><span>Gemini CLI</span><span>Claude</span></div>
+    <p class="diagram-note">Your client supplies the model. This server supplies the context.</p>
+  </div>
+</section>
+<div class="wrap facts"><span><b>01</b> Direct Telegram ingestion</span><span><b>02</b> Standard MCP tools</span><span><b>03</b> Self-hosted by you</span></div>
+<section class="wrap section" id="capabilities" aria-labelledby="capabilities-title">
+  <div class="section-intro"><p class="eyebrow">SMALL SURFACE. USEFUL CONTEXT.</p><h2 id="capabilities-title">The right tools for<br>the conversation.</h2><p>Retrieve just enough context to investigate a report, follow a discussion or find a decision. Analysis happens in the client you choose.</p></div>
+  <div class="features">
+    <article><span class="feature-index">01 / READ</span><h3>Pick up the thread.</h3><p>Read retained messages from an allowed chat, with pagination and bounded context around a specific message.</p><code>telegram_messages</code> <code>telegram_context</code></article>
+    <article><span class="feature-index">02 / SEARCH</span><h3>Find the useful detail.</h3><p>Search retained text in a single allowed chat. Durable local storage keeps the context available across restarts.</p><code>telegram_search</code></article>
+    <article><span class="feature-index">03 / SEND, OPTIONALLY</span><h3>Keep actions intentional.</h3><p>Sending is off by default. Enable it explicitly for chosen chats, with confirmation and durable idempotency keys.</p><code>telegram_send</code></article>
+  </div>
+</section>
+<section class="clients-section" id="clients" aria-labelledby="clients-title"><div class="wrap">
+  <div class="section-heading"><div><p class="eyebrow">YOUR TOOLS. YOUR MODEL.</p><h2 id="clients-title">One server.<br>Your preferred workspace.</h2></div><p>Standard MCP transports keep the connector independent of any single assistant. Start with the setup guide for your client.</p></div>
+  <div class="clients-grid">
+    <a href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/docs/clients.md#codex-cli--ide"><span class="client-symbol" aria-hidden="true">&gt;_</span><h3>Codex</h3><p>CLI / IDE</p><span class="client-link">Setup guide ↗</span></a>
+    <a href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/docs/clients.md#cursor"><span class="client-symbol" aria-hidden="true">⌁</span><h3>Cursor</h3><p>Local editor</p><span class="client-link">Setup guide ↗</span></a>
+    <a href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/docs/clients.md#gemini-cli"><span class="client-symbol" aria-hidden="true">✦</span><h3>Gemini CLI</h3><p>Terminal</p><span class="client-link">Setup guide ↗</span></a>
+    <a href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/docs/clients.md#claude-code"><span class="client-symbol" aria-hidden="true">✳</span><h3>Claude</h3><p>Code / Desktop*</p><span class="client-link">Setup guide ↗</span></a>
+  </div>
+  <div class="verification"><span class="verification-label">VERIFICATION STATUS</span><p><strong>SDK stdio and HTTP integration tests pass.</strong> Client setup follows official documentation; the actual Codex, Cursor, Gemini CLI and Claude applications and real Telegram have not been live-tested. *Desktop manual setup depends on the installed version and policy; no extension bundle is provided. Consumer web/mobile apps are not covered.</p><a href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/docs/clients.md#verification-matrix">See the full matrix <span aria-hidden="true">↗</span></a></div>
+</div></section>
+<section class="wrap section start" id="start" aria-labelledby="start-title">
+  <div class="section-intro"><p class="eyebrow">FROM SOURCE TO LOCAL</p><h2 id="start-title">A small setup.<br>A clear starting point.</h2><p>Node.js 24 and npm are all you need to build and test. Start without credentials, then connect a dedicated bot when you're ready.</p><a class="text-link" href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/docs/integration.md">Read the Telegram setup guide ↗</a></div>
+  <div class="setup">
+    <div class="terminal"><div class="terminal-bar"><span><i></i><i></i><i></i></span><span>01 — BUILD &amp; VERIFY</span></div><pre tabindex="0" aria-label="Build and test commands"><code>git clone https://github.com/vladimirperepelytsia/tg2codexMCP.git
+cd tg2codexMCP
+npm ci
+npm run check</code></pre><div class="terminal-footer">No bot token needed for these checks.</div></div>
+    <div class="setup-step"><span>02</span><div><h3>Choose what the bot can see.</h3><p>Copy <code>.env.example</code> to a private <code>.env</code>. Set your bot token, an absolute database path and <code>ALLOWED_CHAT_IDS=&lt;tg_channel_id&gt;</code>. Replace the placeholder with a real numeric Telegram chat ID. Keep sending disabled.</p></div></div>
+    <div class="setup-step"><span>03</span><div><h3>Connect your client.</h3><p>Use an <a href="https://github.com/vladimirperepelytsia/tg2codexMCP/tree/main/examples/clients">example configuration</a> with absolute paths. Use one stdio client per bot, or share one HTTP service across clients. Polling starts when the process starts.</p></div></div>
+    <p class="setup-note">Already using the bot elsewhere? Polling acknowledges updates and can conflict with another consumer. Existing webhooks are never changed automatically.</p>
+  </div>
+</section>
+<section class="wrap boundaries" aria-labelledby="boundaries-title"><div><p class="eyebrow">EXPLICIT BY DESIGN</p><h2 id="boundaries-title">Your context.<br>Your boundaries.</h2><a class="text-link" href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/docs/security.md">Explore the security model ↗</a></div><div class="boundary-list">
+  <article><h3>Only the chats you allow</h3><p>Disallowed chat content is discarded before retention. This is bot access, not personal-account access or a complete Telegram history.</p></article>
+  <article><h3>Local retention, deliberate sharing</h3><p>Messages live in your SQLite database, with seven-day retention by default. Retrieved content is shared with your chosen AI client and is subject to its data policies.</p></article>
+  <article><h3>Data stays data</h3><p>Messages are treated as untrusted content. No shell execution, automatic forwarding or built-in model calls. Keep your client's tool approvals enabled.</p></article>
+  <article><h3>Optional means optional</h3><p>Dot Events is a separate, disabled-by-default extension. Standard tools work without it. Public hosting, OAuth and generic conversation wake-ups remain future work.</p></article>
+</div></section>
+<section class="wrap closing"><span class="closing-symbol" aria-hidden="true">[↗]</span><p class="eyebrow">OPEN SOURCE. OPEN TO CONTRIBUTION.</p><h2>Build with the context<br>you already have.</h2><div class="actions"><a class="button primary" href="https://github.com/vladimirperepelytsia/tg2codexMCP">View on GitHub ↗</a><a class="button secondary" href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/docs/roadmap.md">Explore the roadmap ↗</a></div></section>
+</main>
+<footer class="wrap footer"><a class="brand" href="./">tg2codex<span>MCP</span></a><p>Telegram context, connected.</p><nav aria-label="Footer navigation"><a href="https://github.com/vladimirperepelytsia/tg2codexMCP/tree/main/docs">Documentation</a><a href="https://github.com/vladimirperepelytsia/tg2codexMCP/blob/main/LICENSE">Apache 2.0</a><a href="https://github.com/vladimirperepelytsia/tg2codexMCP/issues">Contribute ↗</a></nav></footer>
+</body>
+</html>

@@ -3,6 +3,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      revision:
+        description: Commit SHA or branch to verify (defaults to main)
+        required: false
+        default: main
 permissions:
   contents: read
 jobs:
@@ -10,6 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.revision || github.sha }}
+      - name: Record checked revision
+        run: git rev-parse HEAD
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
