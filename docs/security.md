@@ -1,25 +1,31 @@
 # Security boundaries
 
-This service is initially for one trusted owner on a private machine. It is not a public multi-tenant service. A stolen read credential exposes all configured chats and permits subscriptions to configured callback hosts. A stolen send credential additionally permits sends to the send allowlist when sending is enabled. `confirmed=true` records caller intent; it is not an independent human approval mechanism. Keep write credentials out of read-only plugin connections.
+One trusted owner and one bot per database. Telegram content remains untrusted even when transport authentication succeeds. The server never executes messages, follows embedded instructions, invokes a model API, or forwards reports automatically.
 
-## Ingress
+## Direct Telegram access
 
-The connector accepts forwarded Telegram Update objects, not direct Telegram webhooks. The trusted adapter must verify its own source and keep the connector ingress key private. HMAC-SHA256 covers timestamp, nonce and exact raw body, with a five-minute clock window and durable nonce rejection. Each retry uses a fresh nonce/signature, preserving `update_id`. TLS is required if forwarding crosses machines. Header secrets and body text are never logged by application code.
+Polling uses a configured bot token against fixed HTTPS Bot API methods (`getMe`, `getWebhookInfo`, `getUpdates`). The destination is validated/pinned with normal TLS hostname verification; redirects are rejected. Credentials are never logged. API error descriptions/bodies are not propagated; only sanitized codes are reported. Batches have response, count and request-time limits. Shutdown aborts in-flight network work.
 
-The adapter's key can forge updates: it is an explicit trust boundary. This is not a Telegram cryptographic signature. Telegram's own webhook secret header must be checked upstream if that mode is used. This project never registers or replaces a bot webhook.
+Polling acknowledges updates and consumes the bot's stream. It requires ownership/authorization for that stream; it cannot be shared casually with another application. Existing webhooks are refused, not replaced. Conflicts stop polling. The configured chat allowlist applies before retention, retrieval, subscriptions and sends. Disallowed-chat content is never stored, but its update is acknowledged. A database is bound to the observed bot ID to prevent accidental token changes to a different bot. A v1 adapter database has no prior bot identity; confirm its origin before binding or use a new database.
 
-## MCP and callbacks
+## MCP transports and sends
 
-The listener binds loopback, validates Host and rejects browser Origin headers. Static bearer tokens authenticate one owner; the send token is separate. The process does not trust user-supplied owner IDs. Token changes require restart. There is no OAuth server, token expiry or per-user ACL yet. Public exposure requires a reviewed authentication gateway and transport setup, not just an open port.
+Stdio access is authorized by the operating-system user launching the process; there is no bearer-token exchange over private stdin/stdout. Protect the env file and local account. Explicitly enabling sends grants that local process write tools for the send allowlist. No stdout logging is permitted.
 
-Subscriptions use exact approved callback hostnames, HTTPS on port 443, and no URL credentials or fragments. Every verification and delivery resolves the hostname, rejects all non-public answers, pins a validated address for the connection and retains the original TLS hostname. Redirects are not followed. Requests and responses have size and time bounds. Callback challenges contain fresh random data; only a successful exact echo activates delivery. Standard Webhooks signing binds body, timestamp and ID. Receivers must verify signatures and deduplicate IDs; local tests exercise signature rejection via the library.
+HTTP binds loopback, validates Host, rejects browser Origin headers and authenticates every request. A read token can access configured chats and, only if enabled, create subscriptions. A distinct send token additionally exposes writes when enabled. Static tokens have no OAuth discovery, expiry or per-user ACL. Do not expose this service publicly without separately reviewed authentication/network controls. Multiple HTTP clients represent the same trusted owner.
 
-Signing secrets are stored in SQLite with restricted file permissions, not encrypted at rest by this application. Use host disk encryption and protected backups. Secret refresh supports a five-minute overlap; old keys are removed from active records by maintenance after that window. Subscriptions are rechecked against current allowlists and expiration during delivery. An in-flight request may already have been sent when unsubscribe/revocation occurs.
+`confirmed=true` records caller intent, not an independent human approval dialog. Keep client-side write approvals. Sends are disabled by default. Durable idempotency records prevent repeating the same key; any uncertain result stays unknown and is never automatically retried, including after restart. Different keys can send duplicates, so do not generate a replacement key to bypass uncertainty.
 
-## Data and operations
+## Optional Events and adapter
 
-Messages, captions and callback secrets are sensitive local state. Event payloads carry identifiers only. Retention removes service records but cannot erase remote receiver copies or historical backups. Attachments are not fetched. Disallow logging request headers/bodies in proxies, n8n and monitoring. The service reports only small operational event codes.
+Events are off by default, require HTTP, and are advertised only in the modern protocol era. Callbacks require exact approved HTTPS hosts; all DNS answers must be public and the actual TLS connection is pinned to a validated address. No redirects or unbounded response bodies. Random challenges verify callback ownership; Standard Webhooks signs exact body/ID/timestamp. Payloads contain IDs only. Receivers must verify signatures and deduplicate event IDs. Key rotation supports a five-minute overlap, followed by active-record cleanup. Secrets are stored in the private database, not encrypted by the application.
 
-Payload text is untrusted even when transport authentication succeeds. The connector does not execute text, classify bugs, follow embedded instructions, forward to a management chat, or create automation tasks. Those actions belong to the actual dot under the user's explicit instructions and confirmation policy.
+When disabled, Events sends nothing and enqueues no new jobs; existing state may resume if re-enabled before expiry. Unsubscribe invalidates pending verification; a request already on the wire cannot be recalled. Scope/expiry is rechecked before delivery.
 
-Resource limits constrain payloads, queries, connections, subscriptions and queue size. Add upstream rate limits and disk quotas before network exposure. Audit all dependencies and remote endpoints before production use. Exactly one worker/process is supported; multiple instances could duplicate outbox deliveries and are outside this release's operating contract.
+The optional adapter endpoint exists only in adapter mode. Its trusted sender signs raw JSON with HMAC, timestamp and durable nonce; the five-minute timestamp window and nonce table reject captured replay. This is an adapter signature, not a Telegram signature. Adapter input must be authenticated upstream. It is not required for direct polling.
+
+## Storage and operations
+
+Use restrictive permissions, disk encryption, quotas and protected backups. SQLite secure deletion and retention cannot erase historical backups or SSD snapshots. Contents, callback secrets, Telegram token and personal settings never belong in Git. Proxies/monitoring must not log request bodies or authorization headers.
+
+The runtime's exclusive lock protects a database from concurrent instances. A crash may leave a stale lock: verify the recorded process is absent before an operator removes it. Do not automate unsafe stale-lock removal. Different database paths cannot prevent pollers from competing for one bot. Add stronger host/service coordination before multi-instance deployment. No live credentials, client grants, webhook mutation or public deployment was performed in development.

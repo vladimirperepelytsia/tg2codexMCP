@@ -1,46 +1,50 @@
 # tg2codexMCP
 
-A self-hosted Telegram-to-MCP connector for scoped message analysis in a ChatGPT dot. It receives selected Telegram updates from an authenticated adapter (initially n8n), retains a bounded local copy, and exposes read tools and webhook events. Analysis happens in the subscribing dot; this service does not call an LLM or impersonate a dot with an API classifier.
+A standalone Telegram MCP server for **Codex, Cursor, Gemini CLI, Claude Code and Claude Desktop**. It reads bot-received updates directly from the Telegram Bot API, retains a bounded local copy, and exposes tools for message retrieval, context, search and optional controlled sends. **No n8n, workflow platform, LLM API or dot is required.** The connected client performs analysis using its own model.
 
-**Status: first local implementation, not a deployed integration.** Automated tests use synthetic messages and mocked outbound endpoints. Installation in the owner's ChatGPT account, live Telegram delivery, and routing confirmed reports into a management chat remain unverified. No existing bot webhook or n8n workflow is changed by this project.
+**Status: locally tested implementation, not a live integration certification.** The official MCP SDK client passes stdio and Streamable HTTP integration tests. Client-specific setup is based on official documentation; the five applications have not been configured or exercised against a live bot. See the [verification matrix](docs/clients.md#verification-matrix).
 
-## Implemented
+## Quick start
 
-- TypeScript on Node.js 24, SQLite storage with transactional message updates and delivery outbox.
-- Signed adapter ingress, replay detection, update deduplication, latest edited text, chat allowlists, bounded retention.
-- `telegram_messages`, `telegram_search`, and `telegram_context`, with bounded pages/context and untrusted text labeling.
-- Optional `telegram_send`, disabled by default, with separate credentials, destination allowlist and durable idempotency ledger.
-- MCP 2 (`2026-07-28`) HTTP endpoint through the official SDK; draft `events/list`, `events/subscribe`, `events/unsubscribe` extension for `message.created` and `message.edited`.
-- Verified callbacks, Standard Webhooks signatures, secret rotation, durable retries, expiration and unsubscribe.
-
-## Local development
-
-Requires Node.js 24.x and npm. No Telegram token is needed for tests.
+Requires Node.js 24.x and npm. Build and test without credentials:
 
 ```sh
 npm ci
 npm run check
 ```
 
-`check` runs ESLint, strict TypeScript checks, fixture tests and compilation. The integration test opens only an ephemeral loopback port. Some sandboxed runners need permission to open that port. Build output goes to ignored `dist/`.
+After approving use of a dedicated bot, copy `.env.example` to ignored `.env`, supply the bot token and allowed chat IDs, and set an **absolute** private `DB_PATH`. Keep sending disabled initially. Configure one client using an [example](examples/clients/) and the [client instructions](docs/clients.md). Each example launches Node directly; do not use `npm start` as the client's stdio command because npm can write non-protocol output to stdout.
 
-For an approved local operator setup, copy `.env.example` to ignored `.env`, provision distinct secrets, set a real read allowlist, then run:
+The default is `MCP_TRANSPORT=stdio` and `INGESTION_MODE=polling`. The client starts/stops the process. `INGESTION_MODE=offline` reads retained data with no polling; an [offline template](examples/offline.env.example) needs no secrets. Polling starts on process launch and acknowledges Telegram updates, so do not enable it casually for a bot used elsewhere.
 
-```sh
-npm run build
-npm start
-```
+For multiple clients at once, run **one** HTTP connector with [the HTTP template](examples/http.env.example), then connect clients to `http://127.0.0.1:8787/mcp` with the configured bearer token. `npm start` is suitable for that foreground HTTP process. Never run several polling processes for the same bot, even with different databases. A database lock prevents accidental concurrent use of the same database.
 
-The process binds **127.0.0.1 only**. `GET /healthz` gives a minimal liveness response. `POST /mcp` requires `Authorization: Bearer <MCP_TOKEN>`; a separately configured send credential has the same owner's read scope plus sending. `POST /ingress/telegram` uses the adapter signature described in [integration setup](docs/integration.md). Placeholder secrets intentionally fail startup. Do not commit `.env` or database files.
+## Tools
 
-## Scope and limitations
+| Tool | Behavior |
+| --- | --- |
+| `telegram_messages` | Newest retained messages in one allowed chat; keyset pagination |
+| `telegram_search` | Literal substring search within one allowed chat |
+| `telegram_context` | One retained message and bounded neighboring messages |
+| `telegram_send` | Optional, explicitly enabled, allowlisted send with durable idempotency |
 
-One process, one configured owner, one bot update stream per database. Bot updates are what the bot actually receives; retained messages are not a complete personal-account archive. Text and captions are retained; attachments, deleted-message synchronization, topic filtering, and history import are not implemented. Unsupported updates are acknowledged without retained content.
+Read tools work independently of event subscriptions. Text is marked as untrusted data. Sends require `ENABLE_SEND=true`, a bot token, `SEND_CHAT_IDS`, `confirmed=true` and an idempotency key. HTTP also requires a separate send bearer credential. For stdio, access is granted by explicitly enabling writes for the locally launched process. Keep the host client's approval prompts enabled.
 
-Search is a literal substring scan within one chat; SQLite `lower()` provides ASCII case folding, not full Unicode search normalization. Pagination uses decreasing Telegram message IDs. Event payloads contain IDs only; retrieve text with a read tool. Events have no historical replay cursor. A successful webhook response means receipt, not completed dot analysis.
+## Ingestion and transports
 
-The first release uses static bearer credentials for a trusted, private deployment. It does not implement OAuth discovery or multi-user isolation, and does not claim public plugin readiness. Callback hosts start empty and must be approved and configured. See [security](docs/security.md), [architecture](docs/architecture.md), and [roadmap](docs/roadmap.md).
+- Direct long polling checks `getMe` and `getWebhookInfo`, then calls `getUpdates`. It never sets/deletes a webhook. An active webhook, authentication failure or polling conflict stops the service with a sanitized error.
+- SQLite persists messages, edits, the polling checkpoint, optional event subscriptions/outbox and send results. Message storage and checkpoint advancement commit together. Disallowed-chat contents are discarded before retention.
+- Standard MCP tools support legacy 2025 initialization and MCP 2 (`2026-07-28`) over stdio and Streamable HTTP through the official SDK. Legacy SSE-only endpoints are not implemented.
+- Dot-specific webhook Events are an **optional, disabled-by-default HTTP extension**. They are not advertised to legacy clients. Ordinary clients discover tools without Events, callbacks or signing secrets.
+
+## Scope and limits
+
+One configured owner and one bot per database; no personal-account login or complete historical archive. This receives only updates Telegram delivers to the bot. Text/captions and edits are retained; media download, deleted-message synchronization and topic filtering are not implemented. Retention defaults to seven days. Search has SQLite's ASCII case folding, not full Unicode normalization.
+
+A standalone client gets tools, not an automatic background task in its conversation. Generic cross-client wake-ups are not implemented. Optional Events require a compatible client and separate live verification. HTTP is loopback-only with static bearer auth; public OAuth/multi-user deployment remains future work.
+
+Read [architecture](docs/architecture.md), [direct Telegram setup](docs/integration.md), [security](docs/security.md), [operations](docs/operations.md) and [roadmap](docs/roadmap.md). Existing signed adapter ingress remains opt-in for advanced integrations; it is not used by the standalone setup.
 
 ## License
 
-The existing [Apache License 2.0](LICENSE) is preserved. `private: true` in package metadata prevents accidental npm publication; it does not change the source license. No copyright owner has been invented. Runtime dependency licenses are recorded in [development guidance](docs/development.md).
+[Apache License 2.0](LICENSE), preserved from the original repository. Package publication is disabled by `private: true`; this does not change the source license.

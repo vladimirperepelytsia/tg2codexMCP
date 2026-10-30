@@ -13,7 +13,7 @@ import { Events, signedHeaders, subscribeSchema } from '../src/events.js';
 import { Sender } from '../src/send.js';
 import { createApp } from '../src/app.js';
 
-const config = () => ({ ...loadConfig({ MCP_TOKEN: 'r'.repeat(40), INGRESS_SECRET: 'i'.repeat(40), ALLOWED_CHAT_IDS: '-1001', CALLBACK_HOSTS: 'receiver.example.com' }), dbPath: ':memory:' });
+const config = () => ({ ...loadConfig({ MCP_TRANSPORT: 'http', INGESTION_MODE: 'adapter', ENABLE_EVENTS: 'true', MCP_TOKEN: 'r'.repeat(40), INGRESS_SECRET: 'i'.repeat(40), ALLOWED_CHAT_IDS: '-1001', CALLBACK_HOSTS: 'receiver.example.com' }), dbPath: ':memory:' });
 const now = Math.floor(Date.now() / 1000);
 const update = (id = 1, text = 'fixture error', mid = id) => ({ update_id: id, message: { message_id: mid, chat: { id: -1001 }, date: now, text } });
 const secret = 'whsec_' + Buffer.alloc(32, 7).toString('base64');
@@ -22,7 +22,7 @@ const echo: Post = async (_url, body) => ({ status: 200, body: JSON.stringify({ 
 
 test('configuration fails closed and separates roles', () => {
   assert.throws(() => loadConfig({}));
-  assert.throws(() => loadConfig({ MCP_TOKEN: 'x'.repeat(40), INGRESS_SECRET: 'x'.repeat(40), ALLOWED_CHAT_IDS: '-1001' }));
+  assert.throws(() => loadConfig({ MCP_TRANSPORT: 'http', INGESTION_MODE: 'adapter', ENABLE_EVENTS: 'true', MCP_TOKEN: 'x'.repeat(40), INGRESS_SECRET: 'x'.repeat(40), ALLOWED_CHAT_IDS: '-1001' }));
   assert.equal(config().sending, false);
 });
 test('ingress signature binds bytes, nonce and timestamp', () => {

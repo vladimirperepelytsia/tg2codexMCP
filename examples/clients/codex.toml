@@ -1,0 +1,10 @@
+# Merge into ~/.codex/config.toml; replace all absolute paths.
+[mcp_servers.telegram]
+command = "/ABSOLUTE/PATH/TO/node"
+args = ["--env-file=/ABSOLUTE/PATH/TO/tg2codexMCP/.env", "/ABSOLUTE/PATH/TO/tg2codexMCP/dist/src/main.js"]
+startup_timeout_sec = 20
+tool_timeout_sec = 30
+# Alternative for a separately running HTTP connector (do not add both):
+# [mcp_servers.telegram]
+# url = "http://127.0.0.1:8787/mcp"
+# bearer_token_env_var = "TELEGRAM_MCP_READ_TOKEN"

@@ -1,20 +1,19 @@
-# Roadmap and current gates
+# Roadmap and live gates
 
-## Implemented locally
+## Implemented
 
-Authenticated adapter ingress, retained message tools, draft event subscriptions, verified/signed callback delivery, durable bounded retry queue, optional controlled sends, docs and fixture tests. The owner-approved development workflow targets main directly after checks.
+Standalone direct Telegram Bot API polling; optional offline/adapter ingestion modes; stdio and authenticated Streamable HTTP tools for legacy/modern MCP; durable message/checkpoint migration, allowlists and retention; optional controlled sends; opt-in HTTP Events; startup/shutdown cancellation and database locking; fixture/interoperability tests and client-specific examples. No workflow platform dependency remains.
 
-## Next integration gates
+## Next live acceptance steps
 
-- Choose and approve a connection path and client-compatible authentication. Static bearer auth is a private baseline; OAuth discovery/gateway remains work for clients that require it.
-- Approve credentials, configured chat IDs and callback hostnames. No real credentials are created by development.
-- Adapt the existing n8n payload/signing path without changing the Telegram webhook.
-- Install the plugin for the actual account; verify events are discoverable and a dot can subscribe and receive them.
-- Verify the management-chat destination and establish a user-confirmed report-routing contract. No private identifier belongs in reusable code.
-- Authorize any real send test separately; sending stays disabled until then.
+1. Approve a dedicated bot/update stream and provision its token plus allowed chat IDs privately. Confirm any existing webhook/consumer before enabling polling.
+2. Configure one intended MCP client with its documented example; verify discovery, a known message, edits, filtering and restart. Application configurations were not installed during development.
+3. If multiple clients are needed simultaneously, run one HTTP process and verify bearer scopes from each client. Keep the single-owner boundary explicit.
+4. Separately authorize a real send test. Leave sends disabled until then.
+5. Optional only: approve callback hosts and connect an Events-capable client; verify its actual subscription/delivery lifecycle. Management-chat routing requires a separate confirmed destination and instruction contract.
 
-## Before broader production use
+## Future work
 
-Add load testing, reviewed request rate limits, operational queue metrics, dead-letter inspection/reconciliation without message logging, database migrations, backup/restore procedures and graceful shutdown deadline. Review callback network behavior against a controlled TLS/DNS environment. Pin deployment artifacts and recheck dependency licenses/vulnerabilities. Add compliant OAuth and principal-scoped storage before multiple users. Multi-process delivery needs leases/locking before horizontal scale.
+Operational freshness/queue diagnostics without content logging, Unicode-aware indexed search, topic filters, media metadata/download policy, reviewed desktop extension packaging, optional direct hosted Telegram webhook mode, rate limits and disk quotas, load/backup/restore exercises, and client UI acceptance tests. Add OAuth/principal-scoped storage before public multi-user hosting. Distributed delivery requires leases/coordination; do not run multiple instances on this database.
 
-Possible later features: topic/thread filters, Unicode-aware indexed search, media metadata with separately authorized downloads, replay cursors, deleted-message handling where supported, and a portable n8n adapter package. Never promise access to history the bot does not receive.
+Generic MCP tool access does not schedule background conversation runs in every client. Cross-client push/task semantics require client-specific integration and are not promised by optional dot Events. Personal-account/full-history access is outside the Bot API connector's scope.

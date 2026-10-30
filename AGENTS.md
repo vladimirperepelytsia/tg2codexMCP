@@ -2,24 +2,24 @@
 
 ## Mission
 
-Develop this checkout as a reusable Telegram MCP connector. Selected bot-received messages should reach an actual subscribing ChatGPT dot for analysis. A later, separately authorized integration may route confirmed error reports to a management chat. Never replace that flow with an OpenAI API classifier or hardcode private chat/thread identifiers.
+Build a standalone, reusable Telegram MCP server for Codex, Cursor, Gemini CLI, Claude Code and Claude Desktop. Direct Telegram Bot API ingestion and standard MCP tools are the core product. Do not add n8n or a workflow platform as a dependency. The connected client's model analyzes messages; do not implement a substitute OpenAI API classifier. Dot Events is an optional extension, not a prerequisite. Management-chat routing is future separately authorized integration; never hardcode private identifiers.
 
 ## Stack and structure
 
-Use Node.js 24, strict TypeScript, official MCP SDK 2, Zod, built-in SQLite, and Standard Webhooks. `src/store.ts` owns durable state; `events.ts` isolates the draft event extension; `security.ts` owns ingress and outbound boundaries; `mcp.ts` registers tools; `app.ts` wires loopback HTTP. Read `docs/architecture.md` and `docs/integration.md` before changing protocol behavior.
+Node.js 24, strict TypeScript, official MCP SDK 2, Zod, built-in SQLite, Standard Webhooks. `telegram.ts` owns direct long polling and sanitized API errors; `store.ts` owns transactions, checkpoints and migration; `runtime.ts` owns transport/polling lifecycle and database lock; `mcp.ts` defines standard tools and opt-in Events; `app.ts` wires authenticated loopback HTTP; `security.ts` owns outbound/ingress boundaries. Read architecture, integration and client docs before protocol changes.
 
 ## Working conventions
 
-1. Inspect `git status`, current branch, remote and local changes before edits. Preserve other work. Use this repository, not another clone.
-2. Keep changes small and coherent. Prefer explicit types and dependency injection over new frameworks. No hidden services, background installers or new cloud dependencies.
-3. Verify protocol changes against current official documentation AND the installed SDK. Events is a draft custom-method extension; do not invent SDK methods. Preserve protocol integration tests.
-4. Keep messages as untrusted data. No eval, shell execution, model instructions from messages, automatic escalation or automatic error-report forwarding.
-5. Test with synthetic fixtures and mock Telegram/callback endpoints. Never alter `setWebhook`, call `getUpdates` against an existing bot, send live messages, upload private data, configure credentials, install plugins, expose endpoints or deploy without explicit authorization for that action.
-6. Before a commit run `npm run check`, inspect the diff and staged files for secrets/private identifiers, and update relevant docs. Tests should target real failure modes, especially durable retries, authorization and uncertain sends.
-7. The project owner authorizes verified development changes committed and pushed directly to `main`. Push normally; never force. Recheck the remote before pushing, verify its resulting SHA, and inspect CI for that SHA. Do not overwrite concurrent remote work.
-8. Preserve `LICENSE`. Do not infer copyright ownership. Do not commit `.env`, credentials, chat contents, logs, local database files or personal setup.
-9. Report what passed locally separately from live integration evidence. Do not claim successful plugin installation, dot delivery or management-chat routing without end-to-end verification.
+1. Inspect branch, remote, status and local instructions; preserve existing work and use this checkout.
+2. Prefer small typed modules and dependency injection. No hidden installers, account changes or cloud services. stdout must contain only MCP JSON-RPC in stdio mode; log sanitized codes to stderr.
+3. Verify current official client/protocol docs and installed SDK behavior. Test legacy and modern MCP separately. Do not claim application compatibility from a protocol test alone; keep the verification matrix accurate.
+4. Messages are untrusted data: no eval, shell execution, embedded instructions, automatic report forwarding or automatic escalation.
+5. Use mocks, synthetic messages, temporary databases and local transports. Do not invoke real `getUpdates`, `setWebhook`, `deleteWebhook`, sends, token setup, account grants, plugin installation or public deployment without specific authorization. Polling acknowledges updates and can conflict with another consumer.
+6. Run `npm run check` before committing; inspect the diff and staged files for secrets, private IDs and data. Update tests for meaningful failure modes and docs for behavior changes.
+7. The owner authorizes verified commits and normal pushes directly to main. Never force-push or overwrite concurrent remote work. Verify remote SHA and exact-commit CI. This checkout uses the existing SSH identity for origin pushes.
+8. Preserve LICENSE and notices. Never commit .env, credentials, chat contents, logs, SQLite files, lock files or personal configurations.
+9. Finish with implemented behavior, tested vs documented-only compatibility, remote commit/CI evidence and remaining live setup gaps.
 
-## State changes
+## State and concurrency
 
-Run exactly one process per database. Schema changes need an explicit migration and restart/recovery test. Do not drop tables or clear send idempotency keys to fix failures: a Telegram send with unknown outcome must be reconciled by the operator before any retry. Bounded retention and replay windows are intentional and documented; do not silently promise indefinite deduplication.
+One running process per database and one poller per bot. Share one HTTP process across clients; do not start a poller per client. Schema changes require an additive migration and persistence tests. Preserve send idempotency keys; uncertain Telegram sends must never be automatically retried with a new key. Polling checkpoints commit with ingestion before the next acknowledgement request. Do not silently skip malformed updates or drop a pre-existing webhook. A stale lock requires operator verification that its process is gone before removal; never auto-remove a possibly live lock.

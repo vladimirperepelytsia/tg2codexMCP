@@ -19,6 +19,7 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/tg2codex
+# Set MCP_TRANSPORT=http and INGESTION_MODE=polling.
 # Set DB_PATH=/var/lib/tg2codex/connector.sqlite in the environment file.
 
 [Install]

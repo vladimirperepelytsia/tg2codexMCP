@@ -1,18 +1,11 @@
 # Development and validation
 
-Use `npm ci` with the committed lockfile and Node 24.x. Run `npm run check` before committing: ESLint, TypeScript, Node test runner (via tsx), and build. No live secrets are needed. Tests use temporary SQLite files or memory, synthetic IDs and injected callback/Telegram transports. The HTTP test binds an ephemeral loopback port and closes it.
+Use Node 24.x and `npm ci` with the committed lockfile. `npm run check` runs ESLint, strict TypeScript checks, Node tests through tsx, then compilation. No credentials or client accounts are required. Tests use synthetic messages, temporary SQLite state, mocked Telegram/callback networking and ephemeral loopback ports. The official MCP SDK v1 client is development-only and tests both real child-process stdio and Streamable HTTP against the SDK 2 server.
 
-The tests cover signature binding/freshness, duplicate update/replay rejection, stale edits, pagination/search/context, subscription verification and refresh, signing-key rotation, durable delivery after reopening the database, atomic queue backpressure, retry IDs, terminal responses, retention/revocation, private-address rejection, send role enforcement and uncertain outcomes, and MCP HTTP discovery/tool/event requests. They do not constitute live Telegram, TLS/DNS infrastructure, ChatGPT installation or management-chat verification.
+Coverage includes signatures/replay, update deduplication and ordering, chat scope, paging/search/context, optional event verification/rotation/retries, direct Telegram preflight, durable polling offsets, atomic backpressure, retry classification, migration, protocol negotiation, send uncertainty, lifecycle cancellation, startup rollback and lock cleanup. Client-specific applications and live Telegram remain documented-only integration targets; see the matrix in `clients.md`.
 
-The dependency lockfile pins exact direct and transitive versions. Installed runtime package manifests declare: MCP server/node adapters (Apache-2.0), Zod (MIT), Standard Webhooks (MIT) and ipaddr.js (MIT). Preserve their notices when distributing dependencies and review transitive licenses when packaging. The repository retains its original Apache-2.0 license. Package publication is disabled by `private: true`.
+Runtime dependencies retain their existing licenses: MCP server/node adapters Apache-2.0; Zod, Standard Webhooks and ipaddr.js MIT. The lockfile records transitive licenses. Review notices and dependency advisories when distributing. The repository's original Apache-2.0 is unchanged and npm publication remains disabled.
 
-CI runs the same `npm ci` and `npm run check` on Node 24 with read-only repository permissions. Use mocked transports in CI. Do not add live bot tokens as CI secrets just to exercise integration tests.
+CI runs `npm ci` and the same check command on Node 24 with read-only repository permissions. Never add real bot credentials just to make an integration test run. Tests must never acknowledge an owner's actual Telegram updates.
 
-Protocol sources checked for this implementation:
-
-- [MCP TypeScript SDK v2](https://ts.sdk.modelcontextprotocol.io/v2/), installed server 2.4.0 and node adapter 2.1.2; declarations and implementation checked locally.
-- [MCP Events](https://developers.openai.com/plugins/build/mcp-events) and its linked draft specification.
-- [Plugin connection](https://developers.openai.com/plugins/deploy/connect-chatgpt).
-- [Telegram Bot API](https://core.telegram.org/bots/api).
-
-When changing a dependency or protocol, rerun wire tests and document compatibility changes. Add real failure-mode tests, not implementation mirrors. Never turn a test into a production action.
+Sources checked for 0.2.0: installed SDK declarations/implementation, [MCP SDK v2](https://ts.sdk.modelcontextprotocol.io/v2/), [Telegram Bot API](https://core.telegram.org/bots/api), and the per-client official pages linked in `clients.md`. Events remains a replaceable draft extension. Recheck sources when protocol or client behavior changes.

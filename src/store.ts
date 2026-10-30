@@ -30,7 +30,7 @@ export class Store {
     this.db = new DatabaseSync(config.dbPath);
     if (config.dbPath !== ':memory:') chmodSync(config.dbPath, 0o600);
     const version = Number(this.db.prepare('PRAGMA user_version').get()!.user_version);
-    if (version > 1) { this.db.close(); throw new AppError('unsupported_database_version', 500); }
+    if (version > 2) { this.db.close(); throw new AppError('unsupported_database_version', 500); }
     this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
       PRAGMA secure_delete=ON;
       CREATE TABLE IF NOT EXISTS messages(chat_id TEXT, message_id INTEGER, text TEXT NOT NULL,
@@ -43,7 +43,11 @@ export class Store {
         body TEXT NOT NULL, attempts INTEGER DEFAULT 0, next_at INTEGER, created INTEGER, state TEXT DEFAULT 'pending');
       CREATE INDEX IF NOT EXISTS jobs_due ON jobs(state,next_at);
       CREATE TABLE IF NOT EXISTS sends(id TEXT PRIMARY KEY, hash TEXT, state TEXT, result TEXT, created INTEGER);
-      PRAGMA user_version=1;`);
+      `);
+    // Additive v1 -> v2 migration preserves all message, event and send state.
+    if (version < 2) this.transaction(() => {
+      this.db.exec('CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL); PRAGMA user_version=2;');
+    });
   }
   transaction<T>(fn: () => T): T {
     this.db.exec('BEGIN IMMEDIATE');
@@ -66,32 +70,62 @@ export class Store {
     return this.transaction(() => {
       const replay = this.db.prepare('INSERT OR IGNORE INTO nonces VALUES(?,?)').run(nonce, now);
       if (!replay.changes) throw new AppError('replayed_request', 409);
-      if (!this.db.prepare('INSERT OR IGNORE INTO updates VALUES(?,?)').run(update.update_id, now).changes) return { status: 'duplicate' };
-      if (!m) return { status: 'ignored' };
-      const chat = String(m.chat.id), version = m.edit_date ?? m.date;
-      if (version * 1000 < now - this.config.retentionDays * 86400000 || version * 1000 > now + 300000) return { status: 'outside_retention' };
-      const old = this.db.prepare('SELECT * FROM messages WHERE chat_id=? AND message_id=?').get(chat, m.message_id) as MessageRow | undefined;
-      if (old && (old.version > version || (old.version === version && old.update_id >= update.update_id))) return { status: 'stale' };
-      const text = m.text ?? m.caption ?? '';
-      // Equivalent retransmissions under a different update ID do not emit again.
-      if (old && old.version === version && old.text === text) {
-        // Advance the ordering watermark even when content is unchanged.
-        this.db.prepare('UPDATE messages SET update_id=? WHERE chat_id=? AND message_id=?').run(update.update_id, chat, m.message_id);
-        return { status: 'duplicate_message' };
-      }
-      this.db.prepare(`INSERT INTO messages VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(chat_id,message_id) DO UPDATE SET
-        text=excluded.text,version=excluded.version,update_id=excluded.update_id,reply_to=excluded.reply_to,retained_at=excluded.retained_at`)
-        .run(chat, m.message_id, text, m.date, version, update.update_id, m.reply_to_message?.message_id ?? null, now);
-      const name = (update.edited_message || update.edited_channel_post) ? 'message.edited' : 'message.created';
-      const matching = this.subscriptions().filter(s => s.chat === chat && s.name === name && s.expires > now);
-      const pending = Number(this.db.prepare('SELECT count(*) AS n FROM jobs').get()!.n);
-      if (pending + matching.length > this.config.maxJobs) throw new AppError('delivery_queue_full', 503);
-      const event = { eventId: `evt_${randomUUID()}`, name, timestamp: new Date(version * 1000).toISOString(),
-        data: { chat_id: chat, message_id: m.message_id, update_id: update.update_id }, cursor: null };
-      for (const s of matching) this.db.prepare('INSERT INTO jobs(id,subscription_id,body,next_at,created) VALUES(?,?,?,?,?)')
-        .run(`${event.eventId}:${s.id}`, s.id, JSON.stringify(event), now, now);
-      return { status: 'accepted' };
+      return this.retain(update, now);
     });
+  }
+  bindBot(id: string) {
+    this.transaction(() => {
+      const old = this.db.prepare("SELECT value FROM metadata WHERE key='telegram_bot_id'").get();
+      if (old && old.value !== id) throw new AppError('database_bound_to_different_bot');
+      this.db.prepare("INSERT OR IGNORE INTO metadata VALUES('telegram_bot_id',?)").run(id);
+    });
+  }
+  pollOffset(now = Date.now()): number | undefined {
+    const row = this.db.prepare("SELECT value FROM metadata WHERE key='poll_checkpoint'").get();
+    if (!row) return undefined;
+    const saved = JSON.parse(String(row.value)) as { offset: number; at: number };
+    // Telegram may choose a new random update ID after a week of inactivity.
+    return now - saved.at < 7 * 86400000 ? saved.offset : undefined;
+  }
+  ingestPolled(input: unknown, now = Date.now()) {
+    const update = updateSchema.parse(input);
+    const m = update.message ?? update.edited_message ?? update.channel_post ?? update.edited_channel_post;
+    return this.transaction(() => {
+      // Disallowed chats are acknowledged without retaining their content.
+      const result = m && !this.config.chats.includes(String(m.chat.id))
+        ? { status: 'filtered' } : this.retain(update, now);
+      this.db.prepare("INSERT INTO metadata VALUES('poll_checkpoint',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value")
+        .run(JSON.stringify({ offset: update.update_id + 1, at: now }));
+      return result;
+    });
+  }
+  private retain(update: z.infer<typeof updateSchema>, now: number) {
+    const m = update.message ?? update.edited_message ?? update.channel_post ?? update.edited_channel_post;
+    if (!this.db.prepare('INSERT OR IGNORE INTO updates VALUES(?,?)').run(update.update_id, now).changes) return { status: 'duplicate' };
+    if (!m) return { status: 'ignored' };
+    const chat = String(m.chat.id), version = m.edit_date ?? m.date;
+    if (version * 1000 < now - this.config.retentionDays * 86400000 || version * 1000 > now + 300000) return { status: 'outside_retention' };
+    const old = this.db.prepare('SELECT * FROM messages WHERE chat_id=? AND message_id=?').get(chat, m.message_id) as MessageRow | undefined;
+    if (old && (old.version > version || (old.version === version && old.update_id >= update.update_id))) return { status: 'stale' };
+    const text = m.text ?? m.caption ?? '';
+    // Equivalent retransmissions under a different update ID do not emit again.
+    if (old && old.version === version && old.text === text) {
+      // Advance the ordering watermark even when content is unchanged.
+      this.db.prepare('UPDATE messages SET update_id=? WHERE chat_id=? AND message_id=?').run(update.update_id, chat, m.message_id);
+      return { status: 'duplicate_message' };
+    }
+    this.db.prepare(`INSERT INTO messages VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(chat_id,message_id) DO UPDATE SET
+      text=excluded.text,version=excluded.version,update_id=excluded.update_id,reply_to=excluded.reply_to,retained_at=excluded.retained_at`)
+      .run(chat, m.message_id, text, m.date, version, update.update_id, m.reply_to_message?.message_id ?? null, now);
+    const name = (update.edited_message || update.edited_channel_post) ? 'message.edited' : 'message.created';
+    const matching = (this.config.eventsEnabled ? this.subscriptions() : []).filter(s => s.chat === chat && s.name === name && s.expires > now);
+    const pending = Number(this.db.prepare('SELECT count(*) AS n FROM jobs').get()!.n);
+    if (pending + matching.length > this.config.maxJobs) throw new AppError('delivery_queue_full', 503);
+    const event = { eventId: `evt_${randomUUID()}`, name, timestamp: new Date(version * 1000).toISOString(),
+      data: { chat_id: chat, message_id: m.message_id, update_id: update.update_id }, cursor: null };
+    for (const s of matching) this.db.prepare('INSERT INTO jobs(id,subscription_id,body,next_at,created) VALUES(?,?,?,?,?)')
+      .run(`${event.eventId}:${s.id}`, s.id, JSON.stringify(event), now, now);
+    return { status: 'accepted' };
   }
   list(chat: string, before: number | undefined, limit: number, query?: string) {
     this.allowed(chat);

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "telegram": {
+      "command": "/ABSOLUTE/PATH/TO/node",
+      "args": ["--env-file=/ABSOLUTE/PATH/TO/tg2codexMCP/.env", "/ABSOLUTE/PATH/TO/tg2codexMCP/dist/src/main.js"]
+    }
+  }
+}

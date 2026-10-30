@@ -9,3 +9,4 @@ data/
 *.log
 coverage/
 .DS_Store
+*.lock

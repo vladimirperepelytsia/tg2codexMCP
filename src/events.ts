@@ -35,6 +35,7 @@ export class Events {
   private pending = new Map<string, symbol>();
   constructor(readonly store: Store, readonly post: Post) {}
   async subscribe(input: z.infer<typeof subscribeSchema>, now = Date.now()) {
+    if (!this.store.config.eventsEnabled) throw new AppError('events_disabled');
     const p = subscribeSchema.parse(input);
     this.store.allowed(p.arguments.chat_id);
     callbackUrl(p.delivery.url, this.store.config.callbackHosts);
@@ -72,7 +73,7 @@ export class Events {
     this.store.unsubscribe(id); return {};
   }
   async tick(now = Date.now()) {
-    if (this.busy) return;
+    if (this.busy || !this.store.config.eventsEnabled) return;
     this.busy = true;
     try {
       this.store.maintain(now);
