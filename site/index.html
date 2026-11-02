@@ -60,12 +60,13 @@ npm ci
 npm run check
 cp -n .env.example .env</code></pre></div>
       </li>
-      <li><h3>Choose the Telegram chat</h3><p>In Telegram, open <strong>@BotFather</strong> and use <code>/newbot</code> to create a dedicated bot. Add it to the intended chat and give it access to the messages you want to read. Enter these values in your private <code>.env</code> file.</p>
+      <li id="channels"><h3>Add one or more Telegram channels</h3><p>Create one dedicated bot with <code>/newbot</code> in <strong>@BotFather</strong>. Add that same bot to every channel you want to read. In your private <code>.env</code>, list their numeric chat IDs on one <code>ALLOWED_CHAT_IDS</code> line, separated by commas.</p>
         <div class="codebox"><div>.env <span>Replace the placeholders</span></div><pre tabindex="0" aria-label="Telegram environment settings"><code>TELEGRAM_BOT_TOKEN=&lt;your_bot_token&gt;
-ALLOWED_CHAT_IDS=&lt;tg_channel_id&gt;
+ALLOWED_CHAT_IDS=&lt;tg_channel_id&gt;,&lt;tg_channel_id&gt;
 DB_PATH=/absolute/private/path/connector.sqlite
 ENABLE_SEND=false</code></pre></div>
-        <p>Replace <code>&lt;tg_channel_id&gt;</code> with the numeric chat ID. Keep the example’s <code>stdio</code> and <code>polling</code> settings. Polling acknowledges updates, so use a bot without an active webhook or another poller.</p>
+        <p>This example connects two channels. Replace each <code>&lt;tg_channel_id&gt;</code> with a different channel’s numeric ID, including its leading minus sign. For one channel, use just its ID. To add another later, give the bot access, append a comma and the new ID, then restart the MCP server.</p>
+        <p>Keep the example’s <code>stdio</code> and <code>polling</code> settings. Polling acknowledges updates, so use a bot without an active webhook or another poller.</p>
       </li>
       <li id="clients"><h3>Connect your MCP client</h3><p>For Codex, merge this into <code>~/.codex/config.toml</code>. Use the Node 24 executable from <code>command -v node</code> and replace both project paths with the absolute path to your checkout.</p>
         <div class="codebox"><div>config.toml <span>Codex · stdio</span></div><pre tabindex="0" aria-label="Codex MCP configuration"><code>[mcp_servers.telegram]
@@ -86,7 +87,7 @@ startup_timeout_sec = 20</code></pre></div>
     <div><p class="label">02 / First read</p><h2 id="read-title">Follow one<br> message.</h2><p>With the server connected, post a new message your bot can see in the allowed chat. Use a distinctive phrase like “release checklist”, then ask your assistant to find it.</p></div>
     <div class="example"><div class="example-head"><span class="dot"></span> Example session</div>
       <div class="prompt"><small>You → Assistant</small><p>“Search chat <code>&lt;tg_channel_id&gt;</code> for ‘release checklist’. Show the matching message and its ID.”</p></div>
-      <p class="hint">Use the actual chat ID in the prompt. A match confirms the bot, local store and client are connected.</p>
+      <p class="hint">Each search reads one channel. To verify several channels, post a test message in each and repeat the prompt with that channel’s numeric ID.</p>
       <details><summary>No matches yet?</summary><p>Check the chat ID and bot visibility. In a group with privacy mode enabled, try a command addressed to your bot. Search for its exact text after the server starts. Telegram provides pending or new updates, not the chat’s full history.</p></details>
     </div>
   </section>
